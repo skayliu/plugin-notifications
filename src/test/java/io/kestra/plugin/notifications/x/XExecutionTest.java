@@ -1,4 +1,4 @@
-package io.kestra.plugin.notifications.slack;
+package io.kestra.plugin.notifications.x;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
@@ -18,7 +18,8 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 
 @KestraTest
-class SlackExecutionTest extends AbstractNotificationTest {
+public class XExecutionTest extends AbstractNotificationTest {
+
     @Inject
     protected TestRunner runner;
 
@@ -27,8 +28,9 @@ class SlackExecutionTest extends AbstractNotificationTest {
 
     @BeforeEach
     protected void init() throws IOException, URISyntaxException {
-        repositoryLoader.load(Objects.requireNonNull(SlackExecutionTest.class.getClassLoader().getResource("flows/common")));
-        repositoryLoader.load(Objects.requireNonNull(SlackExecutionTest.class.getClassLoader().getResource("flows/slack")));
+        repositoryLoader
+            .load(Objects.requireNonNull(XExecutionTest.class.getClassLoader().getResource("flows/common")));
+        repositoryLoader.load(Objects.requireNonNull(XExecutionTest.class.getClassLoader().getResource("flows/x")));
         this.runner.run();
     }
 
@@ -36,32 +38,33 @@ class SlackExecutionTest extends AbstractNotificationTest {
     void flow() throws Exception {
         var execution = runAndCaptureExecution(
             "main-flow-that-fails",
-            "slack"
-        );
+            "x");
 
-        String receivedData = waitForWebhookData(() -> FakeWebhookController.data,5000);
+        String receivedData = waitForWebhookData(() -> FakeWebhookController.data, 5000);
 
         assertThat(receivedData, containsString(execution.getId()));
         assertThat(receivedData, containsString("https://mysuperhost.com/kestra/ui"));
-        assertThat(receivedData, containsString("Failed on task `failed`"));
-        assertThat(receivedData, containsString("{\"title\":\"Env\",\"value\":\"DEV\",\"short\":true}"));
-        assertThat(receivedData, containsString("{\"title\":\"Cloud\",\"value\":\"GCP\",\"short\":true}"));
-        assertThat(receivedData, containsString("{\"title\":\"Final task ID\",\"value\":\"failed\",\"short\":true}"));
+        assertThat(receivedData, containsString("Failed"));
+        assertThat(receivedData, containsString("\"text\""));
+        assertThat(receivedData, containsString("Environment: DEV"));
+        assertThat(receivedData, containsString("Cloud: GCP"));
         assertThat(receivedData, containsString("myCustomMessage"));
     }
 
     @Test
-    void flow_successfullFlowShowLastTaskId() throws Exception {
+    void flow_successfulFlowShowLastTaskId() throws Exception {
         var execution = runAndCaptureExecution(
             "main-flow-that-succeeds",
-            "slack-successful"
-        );
+            "x-successful");
 
-        String receivedData = waitForWebhookData(() -> FakeWebhookController.data,5000);
+        String receivedData = waitForWebhookData(() -> FakeWebhookController.data, 5000);
 
         assertThat(receivedData, containsString(execution.getId()));
         assertThat(receivedData, containsString("https://mysuperhost.com/kestra/ui"));
-        assertThat(receivedData, not(containsString("Failed on task `success`")));
-        assertThat(receivedData, containsString("{\"title\":\"Final task ID\",\"value\":\"success\",\"short\":true}"));
+        assertThat(receivedData, not(containsString("Failed")));
+        assertThat(receivedData, containsString("SUCCESS"));
+        assertThat(receivedData, containsString("Environment: DEV"));
+        assertThat(receivedData, containsString("Status: SUCCESS"));
+        assertThat(receivedData, containsString("\"text\""));
     }
 }
